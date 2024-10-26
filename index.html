@@ -1,223 +1,307 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Card Game Score Dashboard</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        table {
-            width: 100%;
-        }
-        table, th, td {
-            padding: 10px;
-        }
-        th, td {
-            text-align: center;
-        }
-        input {
-            width: 80%;
-            padding: 5px;
-        }
-        .add-round-btn {
-            margin-top: 10px;
-            padding: 10px 20px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        .add-round-btn:hover {
-            background-color: #45a049;
-        }
-        .error {
-            color: red;
-            margin-top: 10px;
-        }
-        #grandTotalRow {
-            font-weight: bold;
-        }
-        #newGameBtn {
-            position: fixed;
-            right: 20px;
-            bottom: 20px;
-            background-color: #f44336;
-        }
-        #newGameBtn:hover {
-            background-color: #d32f2f;
-        }
-    </style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse; /* Ensures borders overlap properly */
+    }
+    table, th, td {
+        padding: 10px;
+        /* border : 1px solid #f3f3f3; */
+    }
+    th, td {
+        text-align: center;
+    }
+    th {
+        position: sticky; /* This enables the stickiness */
+        top: 0; /* Sticks the header to the top of the viewport */
+        background-color: #bbcfebe2; /* Background color for contrast */
+        z-index: 10; /* Ensures it's on top of other content */
+    }
+    tfoot {
+        background-color: #bbcfebe2; /* Background color for contrast */
+    }
+    input {
+        width: 80%;
+        padding: 5px;
+    }
+    .add-round-btn {
+        margin-top: 10px;
+        padding: 10px 20px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        cursor: pointer;
+    }
+    .add-round-btn:hover {
+        background-color: #45a049;
+    }
+    .error {
+        color: red;
+        margin-top: 10px;
+    }
+    #grandTotalRow {
+        font-weight: bold;
+    }
+    #newGameBtn {
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        background-color: #f44336;
+    }
+    #newGameBtn:hover {
+        background-color: #d32f2f;
+    }
+    #validationControl {
+        position: fixed;
+        right: 20px;
+        bottom: 60px;
+        background-color: #f0f0f0;
+        padding: 10px;
+    }
+    .invalid-row {
+        background-color: #f8d7da;
+    }
+    .spacer {
+        height: 100px;
+    }
+    .highlighted {
+        background-color: #f3f3f3; /* Background color for contrast */
+    }
+</style>
 </head>
+
 <body>
+    <center><h2>Lakdi</h2></center>
 
-<h2>Card Game Score Dashboard</h2>
+    <div id="gameArea">
+        <table id="scoreTable">
+            <thead>
+                <tr id="playerHeader">
+                    <th>Round</th>
+                    <th>Hands</th>
+                    <th id="player_name_1">Player 1</th>
+                    <th id="player_name_2">Player 2</th>
+                    <th id="player_name_3">Player 3</th>
+                    <th id="player_name_4">Player 4</th>
+                    <th>Total</th> <!-- New Total Header -->
+                </tr>
+            </thead>
+            <tbody id="scoreTableBody">
+            </tbody>
+            <tfoot>
+                <tr id="grandTotalRow">
+                    <td>Grand Total</td>
+                    <td>Scores</td>
+                    <td id="total_0">0</td>
+                    <td id="total_1">0</td>
+                    <td id="total_2">0</td>
+                    <td id="total_3">0</td>
+                    <td></td> <!-- Empty Total Column in Footer -->
+                </tr>
+            </tfoot>
+        </table>
+        <div class="error" id="errorMessage"></div>
+        <button class="add-round-btn" onclick="addRound()">Add New Round</button>
+        <div class="spacer"></div>
+    </div>
+    <div id="validationControl">
+        Allow Declaring 13 Total (on/off):<input type="checkbox" id="declaredValidationCheckbox"
+            oninput="updateEnableDeclareValidation(this.value)">
+    </div>
 
-<div id="gameArea">
-    <table id="scoreTable">
-        <thead>
-            <tr id="playerHeader">
-                <th>Round</th>
-                <th>Player 1</th>
-                <th>Player 2</th>
-                <th>Player 3</th>
-                <th>Player 4</th>
-            </tr>
-        </thead>
-        <tbody id="scoreTableBody">
-        </tbody>
-        <tfoot>
-            <tr id="grandTotalRow">
-                <td>Grand Total</td>
-                <td id="total_0">0</td>
-                <td id="total_1">0</td>
-                <td id="total_2">0</td>
-                <td id="total_3">0</td>
-            </tr>
-        </tfoot>
-    </table>
-    <button class="add-round-btn" onclick="addRound()">Add New Round</button>
-    <div class="error" id="errorMessage"></div>
-</div>
+    <button id="newGameBtn" class="action-btn" onclick="newGame()">New Game</button>
 
-<button id="newGameBtn" class="action-btn" onclick="newGame()">New Game</button>
+    <script>
+        let roundData = JSON.parse(localStorage.getItem('roundData')) || []
+        let playerNames = JSON.parse(localStorage.getItem('playerNames')) || ["Player 1", "Player 2", "Player 3", "Player 4"]
+        let declaredValidationEnabled = JSON.parse(localStorage.getItem('declaredValidationEnabled')) || false
 
-<script>
-    let roundData = JSON.parse(localStorage.getItem('roundData')) || [];
-    let playerNames = JSON.parse(localStorage.getItem('playerNames')) || ["Player 1", "Player 2", "Player 3", "Player 4"];
+        document.getElementById("declaredValidationCheckbox").checked = declaredValidationEnabled
 
-    function saveState() {
-        localStorage.setItem('roundData', JSON.stringify(roundData));
-        localStorage.setItem('playerNames', JSON.stringify(playerNames));
-    }
-
-    function newGame() {
-        localStorage.removeItem('roundData');
-        localStorage.removeItem('playerNames');
-        roundData = [];
-        
-        // Prompt for player names
-        playerNames = [];
-        for (let i = 1; i <= 4; i++) {
-            const name = prompt(`Enter name for Player ${i}`, `Player ${i}`) || `Player ${i}`;
-            playerNames.push(name);
+        function saveState() {
+            localStorage.setItem('roundData', JSON.stringify(roundData))
+            localStorage.setItem('playerNames', JSON.stringify(playerNames))
+            localStorage.setItem('declaredValidationEnabled', JSON.stringify(declaredValidationEnabled))
         }
 
-        saveState();
-        updatePlayerNames();
-        addRound(); // Initialize with a default round
-    }
+        function newGame() {
+            localStorage.removeItem('roundData')
+            localStorage.removeItem('playerNames')
+            roundData = []
 
-    function updatePlayerNames() {
-        const playerHeader = document.getElementById('playerHeader');
-        playerHeader.innerHTML = `<th>Round</th>` + playerNames.map(name => `<th>${name}</th>`).join('');
-    }
+            playerNames = []
+            for (let i = 1; i <= 4; i++) {
+                const name = prompt(`Enter name for Player ${i}`, `Player ${i}`) || `Player ${i}`
+                playerNames.push(name)
+            }
 
-    function addRound() {
-        const round = playerNames.map(() => ({ declared: 2, made: 0, score: 0 }));
-        roundData.push(round);
-        saveState();
-        renderTable();
-    }
+            saveState()
+            updatePlayerNames()
+            addRound()
+        }
 
-    function renderTable() {
-        const tableBody = document.getElementById('scoreTableBody');
-        tableBody.innerHTML = ''; // Clear existing table
+        function updatePlayerNames() {
+            playerNames.forEach((name, idx)=>{
+                document.getElementById(`player_name_${idx+1}`).innerHTML = name
+            })
+        }
 
-        roundData.forEach((round, roundIndex) => {
-            const declareRow = document.createElement('tr');
-            const madeRow = document.createElement('tr');
-            const scoreRow = document.createElement('tr');
+        function addRound() {
+            const round = playerNames.map(() => ({ declared: 2, made: 0, score: 0 }))
+            roundData.push(round)
+            saveState()
+            renderTable()
+        }
 
-            declareRow.innerHTML = `<td>Round ${roundIndex + 1} - Declare Hands</td>`;
-            madeRow.innerHTML = `<td>Round ${roundIndex + 1} - Made Hands</td>`;
-            scoreRow.innerHTML = `<td>Round ${roundIndex + 1} - Scores</td>`;
+        function preventArrowKeyScroll(event) {
+            // if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+            //     event.preventDefault() // Prevent the default scrolling action
+            // }
+        }
+
+        function renderTable() {
+            const tableBody = document.getElementById('scoreTableBody')
+            tableBody.innerHTML = ''
+
+            roundData.forEach((round, roundIndex) => {
+                const declareRow = document.createElement('tr')
+                const madeRow = document.createElement('tr')
+                const scoreRow = document.createElement('tr')
+
+                if (roundIndex % 2 !== 0) { // odd row
+                    declareRow.classList.add('highlighted')
+                    madeRow.classList.add('highlighted')
+                    scoreRow.classList.add('highlighted')
+                }
+
+                let totalDeclared = 0
+                let totalMade = 0
+
+                declareRow.innerHTML = `<td rowspan=3><b>${roundIndex + 1}</b></td><td>Declared</td>`
+                madeRow.innerHTML = `<td>Made</td>`
+                scoreRow.innerHTML = `<td>Scored</td>`
+
+                round.forEach((player, playerIndex) => {
+                    declareRow.innerHTML += `<td><input type="number" min="2" value="${player.declared}" oninput="updateDeclare(${roundIndex}, ${playerIndex}, this.value)" onkeydown="preventArrowKeyScroll(event)"></td>`;
+                    madeRow.innerHTML += `<td><input type="number" min="0" value="${player.made}" oninput="updateMade(${roundIndex}, ${playerIndex}, this.value)" onkeydown="preventArrowKeyScroll(event)"></td>`;
+                    scoreRow.innerHTML += `<td id="score_${roundIndex}_${playerIndex}">${player.score}</td>`
+
+                    totalDeclared += player.declared
+                    totalMade += player.made
+                })
+
+                declareRow.innerHTML += `<td>${totalDeclared}</td>` // Total Declared
+                madeRow.innerHTML += `<td>${totalMade}</td>` // Total Made
+                scoreRow.innerHTML += `<td></td>` // empty cell
+
+                tableBody.appendChild(declareRow)
+                tableBody.appendChild(madeRow)
+                tableBody.appendChild(scoreRow)
+            })
+
+            updateGrandTotals()
+            validateAndCalculate(roundData.length - 1)
+        }
+
+        function updateDeclare(roundIndex, playerIndex, value) {
+            const declaredValue = parseInt(value) || 0
+            roundData[roundIndex][playerIndex].declared = declaredValue
+            saveState()
+            renderTable()
+            validateAndCalculate(roundIndex)
+        }
+
+        function updateMade(roundIndex, playerIndex, value) {
+            const madeValue = parseInt(value) || 0
+            roundData[roundIndex][playerIndex].made = madeValue
+            saveState()
+            renderTable()
+            validateAndCalculate(roundIndex)
+        }
+
+        function updateEnableDeclareValidation() {
+            declaredValidationEnabled = document.getElementById('declaredValidationCheckbox').checked
+            saveState()
+            roundData.forEach((_, roundIndex) => {
+                validateAndCalculate(roundIndex)
+            })
+        }
+
+        function validateAndCalculate(roundIndex) {
+            const errorMessage = document.getElementById('errorMessage')
+            const round = roundData[roundIndex]
+
+            let totalDeclared = 0
+            let totalMade = 0
+            const tableBody = document.getElementById('scoreTableBody')
+
+            const declareRow = tableBody.rows[roundIndex * 3]
+            const madeRow = tableBody.rows[roundIndex * 3 + 1]
+
+            round.forEach(player => {
+                totalDeclared += player.declared
+                totalMade += player.made
+            })
+
+            if (declaredValidationEnabled && totalDeclared === 13) {
+                errorMessage.innerHTML = `The total declared hands for round ${roundIndex + 1} must not be 13.`
+                declareRow.classList.add('invalid-row')
+                return
+            } else {
+                declareRow.classList.remove('invalid-row')
+            }
+
+            if (totalMade !== 13) {
+                errorMessage.innerHTML = `The total hands made for round ${roundIndex + 1} must be 13.`
+                madeRow.classList.add('invalid-row')
+                return
+            } else {
+                madeRow.classList.remove('invalid-row')
+            }
 
             round.forEach((player, playerIndex) => {
-                declareRow.innerHTML += `<td><input type="number" min="2" value="${player.declared}" oninput="updateDeclare(${roundIndex}, ${playerIndex}, this.value)"></td>`;
-                madeRow.innerHTML += `<td><input type="number" min="0" value="${player.made}" oninput="updateMade(${roundIndex}, ${playerIndex}, this.value)"></td>`;
-                scoreRow.innerHTML += `<td id="score_${roundIndex}_${playerIndex}">${player.score}</td>`;
-            });
+                player.score = calculateScore(player.declared, player.made)
+                document.getElementById(`score_${roundIndex}_${playerIndex}`).innerText = player.score
+            })
 
-            tableBody.appendChild(declareRow);
-            tableBody.appendChild(madeRow);
-            tableBody.appendChild(scoreRow);
-        });
-
-        updateGrandTotals();
-        validateAndCalculate(roundData.length - 1); // Validate the latest round added
-    }
-
-    function updateDeclare(roundIndex, playerIndex, value) {
-        const declaredValue = parseInt(value) || 0;
-        roundData[roundIndex][playerIndex].declared = declaredValue;
-        saveState();
-        validateAndCalculate(roundIndex);
-    }
-
-    function updateMade(roundIndex, playerIndex, value) {
-        const madeValue = parseInt(value) || 0;
-        roundData[roundIndex][playerIndex].made = madeValue;
-        saveState();
-        validateAndCalculate(roundIndex);
-    }
-
-    function validateAndCalculate(roundIndex) {
-        const errorMessage = document.getElementById('errorMessage');
-        const round = roundData[roundIndex];
-        
-        let totalDeclared = 0;
-        let totalMade = 0;
-
-        round.forEach(player => {
-            totalDeclared += player.declared;
-            totalMade += player.made;
-        });
-
-        // if (totalDeclared !== 13) {
-        //     errorMessage.innerHTML = `The total declared hands for round ${roundIndex + 1} must be 13.`;
-        //     return;
-        // }
-        if (totalMade !== 13) {
-            errorMessage.innerHTML = `The total hands made for round ${roundIndex + 1} must be 13.`;
-            return;
+            errorMessage.innerHTML = ''
+            saveState()
+            updateGrandTotals()
         }
 
-        round.forEach((player, playerIndex) => {
-            player.score = calculateScore(player.declared, player.made);
-            document.getElementById(`score_${roundIndex}_${playerIndex}`).innerText = player.score;
-        });
-
-        errorMessage.innerHTML = '';
-        saveState();
-        updateGrandTotals();
-    }
-
-    function calculateScore(declared, made) {
-        if (made < declared) {
-            return declared * -10;
-        } else if (made >= declared && made < 2 * declared) {
-            return declared * 10 + ((made - declared) * 2);
-        } else {
-            return declared * -10;
+        function calculateScore(declared, made) {
+            if (made < declared) {
+                return declared * -10
+            } else if (made >= declared && made < 2 * declared) {
+                return declared * 10 + ((made - declared) * 2)
+            } else {
+                return declared * -10
+            }
         }
-    }
 
-    function updateGrandTotals() {
-        const grandTotals = [0, 0, 0, 0];
+        function updateGrandTotals() {
+            const grandTotals = [0, 0, 0, 0]
 
-        roundData.forEach(round => {
-            round.forEach((player, playerIndex) => {
-                grandTotals[playerIndex] += player.score;
-            });
-        });
+            roundData.forEach(round => {
+                round.forEach((player, playerIndex) => {
+                    grandTotals[playerIndex] += player.score
+                })
+            })
 
-        for (let i = 0; i < grandTotals.length; i++) {
-            document.getElementById(`total_${i}`).innerText = grandTotals[i];
+            for (let i = 0; i < grandTotals.length; i++) {
+                document.getElementById(`total_${i}`).innerText = grandTotals[i]
+            }
         }
-    }
 
     if (roundData.length === 0 || !localStorage.getItem('playerNames')) {
         newGame(); // Start a new game if no data is found
@@ -226,6 +310,5 @@
         renderTable(); // Render from stored data
     }
 </script>
-
 </body>
 </html>
